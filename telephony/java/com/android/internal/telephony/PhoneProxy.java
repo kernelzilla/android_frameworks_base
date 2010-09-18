@@ -835,4 +835,17 @@ public class PhoneProxy extends Handler implements Phone {
     public void unsetOnEcbModeExitResponse(Handler h){
         mActivePhone.unsetOnEcbModeExitResponse(h);
     }
+
+    public void getModemVersion(Message result) {
+        mActivePhone.getModemVersion(result);
+    }
+
+    public void getFactoryVersion(Message result) {
+        mActivePhone.getFactoryVersion(result);
+    }
+
+    public void getHWVersion(Message result) {
+        mActivePhone.getHWVersion(result);
+    }
+
 }

@@ -1456,4 +1456,16 @@ public final class SimulatedCommands extends BaseCommands
     public void getGsmBroadcastConfig(Message response) {
         unimplemented(response);
     }
+
+    public void getModemVersion(Message response) {
+        unimplemented(response);
+    }
+
+    public void getFactoryVersion(Message response) {
+        unimplemented(response);
+    }
+
+    public void getHWVersion(Message response) {
+        unimplemented(response);
+    }
 }

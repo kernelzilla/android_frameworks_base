@@ -1696,4 +1696,8 @@ public interface Phone {
     void unsetOnEcbModeExitResponse(Handler h);
 
 
+    void getModemVersion(Message result);
+    void getFactoryVersion(Message result);
+    void getHWVersion(Message result);
+
 }

@@ -814,6 +814,42 @@ public final class RIL extends BaseCommands implements CommandsInterface {
     }
 
     public void
+    getModemVersion(Message result) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_MODEM_VERSION, result);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() +
+                              "> getModemVersion:RIL_REQUEST_GET_MODEM_VERSION " +
+                              RIL_REQUEST_GET_MODEM_VERSION +
+                              " " + requestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    public void
+    getFactoryVersion(Message result) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_FACTORY_VERSION, result);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() +
+                              "> getModemVersion:RIL_REQUEST_GET_FACTORY_VERSION " +
+                              RIL_REQUEST_GET_FACTORY_VERSION +
+                              " " + requestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    public void
+    getHWVersion(Message result) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_HW_VERSION, result);
+
+        if (RILJ_LOGD) riljLog(rr.serialString() +
+                              "> getModemVersion:RIL_REQUEST_GET_HW_VERSION " +
+                              RIL_REQUEST_GET_HW_VERSION +
+                              " " + requestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    public void
     getIMSI(Message result) {
         RILRequest rr = RILRequest.obtain(RIL_REQUEST_GET_IMSI, result);
 
@@ -2202,6 +2238,9 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_CDMA_DELETE_SMS_ON_RUIM: ret =  responseVoid(p); break;
             case RIL_REQUEST_DEVICE_IDENTITY: ret =  responseStrings(p); break;
             case RIL_REQUEST_GET_SMSC_ADDRESS: ret = responseString(p); break;
+            case RIL_REQUEST_GET_MODEM_VERSION: ret = responseString(p); break;
+            case RIL_REQUEST_GET_FACTORY_VERSION: ret = responseString(p); break;
+            case RIL_REQUEST_GET_HW_VERSION: ret = responseString(p); break;
             case RIL_REQUEST_SET_SMSC_ADDRESS: ret = responseVoid(p); break;
             case RIL_REQUEST_EXIT_EMERGENCY_CALLBACK_MODE: ret = responseVoid(p); break;
             case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS: ret = responseVoid(p); break;
@@ -3247,6 +3286,9 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_EXIT_EMERGENCY_CALLBACK_MODE: return "REQUEST_EXIT_EMERGENCY_CALLBACK_MODE";
             case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS: return "RIL_REQUEST_REPORT_SMS_MEMORY_STATUS";
             case RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING: return "RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING";
+            case RIL_REQUEST_GET_MODEM_VERSION: return "RIL_REQUEST_GET_MODEM_VERSION";
+            case RIL_REQUEST_GET_FACTORY_VERSION: return "RIL_REQUEST_GET_FACTORY_VERSION";
+            case RIL_REQUEST_GET_HW_VERSION: return "RIL_REQUEST_GET_HW_VERSION";
             default: return "<unknown request>";
         }
     }
