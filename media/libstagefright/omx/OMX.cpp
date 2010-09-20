@@ -394,7 +394,6 @@ OMX_ERRORTYPE OMX::OnFillBufferDone(
      }
    }
    msg.u.extended_buffer_data.pmem_offset = offset;
-
    mDispatcher->post(msg);
 
     return OMX_ErrorNone;

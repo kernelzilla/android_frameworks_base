@@ -181,6 +181,7 @@ status_t OMXNodeInstance::freeNode(OMXMaster *master) {
             break;
     }
 
+    mObserver->registerBuffers(NULL);
     OMX_ERRORTYPE err = master->destroyComponentInstance(
             static_cast<OMX_COMPONENTTYPE *>(mHandle));
 
@@ -345,7 +346,6 @@ status_t OMXNodeInstance::freeBuffer(
     BufferMeta *buffer_meta = static_cast<BufferMeta *>(header->pAppPrivate);
 
     OMX_ERRORTYPE err = OMX_FreeBuffer(mHandle, portIndex, header);
-    pmem_registered_with_client = false;
 
     delete buffer_meta;
     buffer_meta = NULL;
@@ -461,6 +461,13 @@ OMX_ERRORTYPE OMXNodeInstance::OnEvent(
     OMXNodeInstance *instance = static_cast<OMXNodeInstance *>(pAppData);
     if (instance->mDying) {
         return OMX_ErrorNone;
+    }
+    if(eEvent == OMX_EventCmdComplete && nData1 == OMX_CommandPortDisable && nData2 == 1) {
+      /*This is needed to clear the reference on pmem fd.
+       * If this is skipped then we will see pmem leak.
+       */
+      instance->mObserver->registerBuffers(NULL);
+      instance->pmem_registered_with_client = false;
     }
     return instance->owner()->OnEvent(
             instance->nodeID(), eEvent, nData1, nData2, pEventData);
