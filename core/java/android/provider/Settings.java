@@ -2169,6 +2169,18 @@ public final class Settings {
          public static final String TRACKBALL_NOTIFICATION_SUCCESSION = "trackball_sucession";
 
          /**
+          * Whether to enable motorola backtrack minipad.  The value is boolean (1 or 0).
+          * @hide
+          */
+         public static final String BACKTRACK_PREF = "pref_backtrack";
+
+         /**
+          * Motorola backtrack minipad default.  The value is boolean (1 or 0).
+          * @hide
+          */
+         public static final String BACKTRACK_PROP = "ro.backtrack.default";
+
+         /**
           * Pulse notifications in Succession.  The value is boolean (1 or 0).
           * @hide
           */
