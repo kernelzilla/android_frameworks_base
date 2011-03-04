@@ -22,6 +22,14 @@
 #include <hardware_legacy/power.h>
 #include <sys/reboot.h>
 
+#ifdef USE_RECOVERY_WRITE_MISC
+#include <fcntl.h>
+#include <sys/mount.h>
+#include <mtd/mtd-user.h>
+#define MTD_PROC_FILENAME   "/proc/mtd"
+#define BOOT_CMD_SIZE       32
+#endif
+
 namespace android
 {
 
@@ -83,6 +91,84 @@ static void android_os_Power_shutdown(JNIEnv *env, jobject clazz)
 #endif
 }
 
+#ifdef USE_RECOVERY_WRITE_MISC
+struct bootloader_message {
+    char command[32];
+    char status[32];
+    char recovery[1024];
+    char stub[2048 - 32 - 32 - 1024];
+};
+
+static char command[2048]; // block size buffer
+static int mtdnum = -1;
+static int mtdsize = 0;
+static int mtderasesize = 0x20000 * 512;
+static char mtdname[64];
+static char mtddevname[32];
+
+static int init_mtd_info() {
+	if (mtdnum >= 0) {
+		return 0;
+	}
+    int fd = open(MTD_PROC_FILENAME, O_RDONLY);
+    if (fd < 0) {
+        return (mtdnum = -1);
+    }
+    int nbytes = read(fd, command, sizeof(command) - 1);
+    close(fd);
+    if (nbytes < 0) {
+        return (mtdnum = -2);
+    }
+    command[nbytes] = '\0';
+	char *cursor = command;
+	while (nbytes-- > 0 && *(cursor++) != '\n'); // skip one line
+	while (nbytes > 0) {
+		int matches = sscanf(cursor, "mtd%d: %x %x \"%63s[^\"]", &mtdnum, &mtdsize, &mtderasesize, mtdname);
+		if (matches == 4) {
+			if (strncmp("misc", mtdname, 4) == 0) {
+				sprintf(mtddevname, "/dev/mtd/mtd%d", mtdnum);
+				//printf("Partition for parameters: %s\n", mtddevname);
+				return 0;
+			}
+			while (nbytes-- > 0 && *(cursor++) != '\n'); // skip a line
+		}
+	}
+    return (mtdnum = -3);
+}
+
+int set_message(char* cmd) {
+        int fd;
+        int pos = 2048;
+        if (init_mtd_info() != 0) {
+                return -9;
+        }
+        fd = open(mtddevname, O_RDWR);
+    if (fd < 0) {
+        return fd;
+    }
+    struct erase_info_user erase_info;
+    erase_info.start = 0;
+    erase_info.length = mtderasesize;
+    if (ioctl(fd, MEMERASE, &erase_info) < 0) {
+                fprintf(stderr, "mtd: erase failure at 0x%08lx (%s)\n", pos, strerror(errno));
+    }
+        if (lseek(fd, pos, SEEK_SET) != pos) {
+                close(fd);
+                return pos;
+        }
+        memset(&command, 0, sizeof(command));
+        strncpy(command, cmd, strlen(cmd));
+        pos = write(fd, command, sizeof(command));
+        //printf("Written %d bytes\n", pos);
+        if (pos < 0) {
+                close(fd);
+        return pos;
+    }
+        close(fd);
+    return 0;
+}
+#endif
+
 static void android_os_Power_reboot(JNIEnv *env, jobject clazz, jstring reason)
 {
     sync();
@@ -91,6 +177,9 @@ static void android_os_Power_reboot(JNIEnv *env, jobject clazz, jstring reason)
         reboot(RB_AUTOBOOT);
     } else {
         const char *chars = env->GetStringUTFChars(reason, NULL);
+#ifdef USE_RECOVERY_WRITE_MISC
+         set_message((char*)chars);
+#endif
         __reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,
                  LINUX_REBOOT_CMD_RESTART2, (char*) chars);
         env->ReleaseStringUTFChars(reason, chars);  // In case it fails.
