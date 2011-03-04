@@ -139,6 +139,9 @@ static const KeycodeLabel KEYCODES[] = {
     { "FUNC_7", 98 },
     { "FUNC_8", 99 },
     { "QUECHAR", 100 },
+#elif defined(MOTUS_KEYPAD)
+    { "KP7", 92 },
+    { "RIGHTBRACE", 93 },
 #endif
 
     // NOTE: If you add a new keycode here you must also add it to:
