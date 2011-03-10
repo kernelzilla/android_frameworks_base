@@ -639,6 +639,24 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
     //***** CommandsInterface implementation
 
+    public void getCdmaSubscriptionSource(Message result) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE, result);
+
+        if (RILJ_LOGD)
+            riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+        send(rr);
+    }
+
+    public void getCdmaPrlVersion(Message result) {
+        RILRequest rr = RILRequest.obtain(RIL_REQUEST_CDMA_PRL_VERSION, result);
+
+        if (RILJ_LOGD)
+            riljLog(rr.serialString() + "> " + requestToString(rr.mRequest));
+
+        send(rr);
+    }
+
     @Override public void
     setOnNITZTime(Handler h, int what, Object obj) {
         super.setOnNITZTime(h, what, obj);
@@ -1378,7 +1396,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
                     send(rrPnt);
 
                     RILRequest rrCs = RILRequest.obtain(
-                                   RIL_REQUEST_CDMA_SET_SUBSCRIPTION, null);
+                                   RIL_REQUEST_CDMA_SET_SUBSCRIPTION_SOURCE, null);
                     rrCs.mp.writeInt(1);
                     rrCs.mp.writeInt(mCdmaSubscription);
                     if (RILJ_LOGD) riljLog(rrCs.serialString() + "> "
@@ -2215,7 +2233,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_GET_PREFERRED_NETWORK_TYPE: ret =  responseInts(p); break;
             case RIL_REQUEST_GET_NEIGHBORING_CELL_IDS: ret = responseCellList(p); break;
             case RIL_REQUEST_SET_LOCATION_UPDATES: ret =  responseVoid(p); break;
-            case RIL_REQUEST_CDMA_SET_SUBSCRIPTION: ret =  responseVoid(p); break;
+            case RIL_REQUEST_CDMA_SET_SUBSCRIPTION_SOURCE: ret =  responseVoid(p); break;
             case RIL_REQUEST_CDMA_SET_ROAMING_PREFERENCE: ret =  responseVoid(p); break;
             case RIL_REQUEST_CDMA_QUERY_ROAMING_PREFERENCE: ret =  responseInts(p); break;
             case RIL_REQUEST_SET_TTY_MODE: ret =  responseVoid(p); break;
@@ -2403,6 +2421,18 @@ public final class RIL extends BaseCommands implements CommandsInterface {
 
                 if (RILJ_LOGD) unsljLogMore(response, mState.toString());
             break;
+            case RIL_UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED:
+                if (RILJ_LOGD) unsljLog(response);
+
+                mCdmaSubscriptionSourceChangedRegistrants
+                    .notifyRegistrants(new AsyncResult(null, null, null));
+                break;
+            case RIL_UNSOL_CDMA_PRL_CHANGED:
+                if (RILJ_LOGD) unsljLog(response);
+
+                mCdmaPrlChangedRegistrants
+                    .notifyRegistrants(new AsyncResult(null, null, null));
+                break;
             case RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED:
                 if (RILJ_LOGD) unsljLog(response);
 
@@ -3259,7 +3289,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_GET_PREFERRED_NETWORK_TYPE: return "REQUEST_GET_PREFERRED_NETWORK_TYPE";
             case RIL_REQUEST_GET_NEIGHBORING_CELL_IDS: return "REQUEST_GET_NEIGHBORING_CELL_IDS";
             case RIL_REQUEST_SET_LOCATION_UPDATES: return "REQUEST_SET_LOCATION_UPDATES";
-            case RIL_REQUEST_CDMA_SET_SUBSCRIPTION: return "RIL_REQUEST_CDMA_SET_SUBSCRIPTION";
+            case RIL_REQUEST_CDMA_SET_SUBSCRIPTION_SOURCE: return "RIL_REQUEST_CDMA_SET_SUBSCRIPTION_SOURCE";
             case RIL_REQUEST_CDMA_SET_ROAMING_PREFERENCE: return "RIL_REQUEST_CDMA_SET_ROAMING_PREFERENCE";
             case RIL_REQUEST_CDMA_QUERY_ROAMING_PREFERENCE: return "RIL_REQUEST_CDMA_QUERY_ROAMING_PREFERENCE";
             case RIL_REQUEST_SET_TTY_MODE: return "RIL_REQUEST_SET_TTY_MODE";
@@ -3286,6 +3316,8 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_REQUEST_EXIT_EMERGENCY_CALLBACK_MODE: return "REQUEST_EXIT_EMERGENCY_CALLBACK_MODE";
             case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS: return "RIL_REQUEST_REPORT_SMS_MEMORY_STATUS";
             case RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING: return "RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING";
+            case RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE: return "RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE";
+            case RIL_REQUEST_CDMA_PRL_VERSION: return "RIL_REQUEST_CDMA_PRL_VERSION";
             case RIL_REQUEST_GET_MODEM_VERSION: return "RIL_REQUEST_GET_MODEM_VERSION";
             case RIL_REQUEST_GET_FACTORY_VERSION: return "RIL_REQUEST_GET_FACTORY_VERSION";
             case RIL_REQUEST_GET_HW_VERSION: return "RIL_REQUEST_GET_HW_VERSION";
@@ -3333,7 +3365,9 @@ public final class RIL extends BaseCommands implements CommandsInterface {
             case RIL_UNSOL_OEM_HOOK_RAW: return "UNSOL_OEM_HOOK_RAW";
             case RIL_UNSOL_RINGBACK_TONE: return "UNSOL_RINGBACK_TONG";
             case RIL_UNSOL_RESEND_INCALL_MUTE: return "UNSOL_RESEND_INCALL_MUTE";
-            default: return "<unknown reponse>";
+            case RIL_UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED: return "UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED";
+            case RIL_UNSOL_CDMA_PRL_CHANGED: return "UNSOL_CDMA_PRL_CHANGED";
+            default: return "<unknown response>";
         }
     }
 
@@ -3418,7 +3452,7 @@ public final class RIL extends BaseCommands implements CommandsInterface {
      */
     public void setCdmaSubscription(int cdmaSubscription , Message response) {
         RILRequest rr = RILRequest.obtain(
-                RILConstants.RIL_REQUEST_CDMA_SET_SUBSCRIPTION, response);
+                RILConstants.RIL_REQUEST_CDMA_SET_SUBSCRIPTION_SOURCE, response);
 
         rr.mp.writeInt(1);
         rr.mp.writeInt(cdmaSubscription);
