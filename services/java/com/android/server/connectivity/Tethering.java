@@ -44,6 +44,7 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.provider.Settings;
 import android.util.Log;
+import android.bluetooth.BluetoothAdapter;
 
 import com.android.internal.telephony.Phone;
 import com.android.internal.util.HierarchicalState;
@@ -74,6 +75,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
     // TODO - remove both of these - should be part of interface inspection/selection stuff
     private String[] mTetherableUsbRegexs;
     private String[] mTetherableWifiRegexs;
+    private String[] mTetherableBtRegexs;
     private String[] mUpstreamIfaceRegexs;
 
     private Looper mLooper;
@@ -86,6 +88,9 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
     private static final String USB_NEAR_IFACE_ADDR      = "192.168.42.129";
     private static final String USB_NETMASK              = "255.255.255.0";
 
+    private static final String BT_NEAR_IFACE_ADDR      = "192.168.44.1";
+    private static final String BT_NETMASK              = "255.255.255.0";
+
     // FYI - the default wifi is 192.168.43.1 and 255.255.255.0
 
     private String[] mDhcpRange;
@@ -93,6 +98,8 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
     private static final String DHCP_DEFAULT_RANGE1_STOP  = "192.168.42.254";
     private static final String DHCP_DEFAULT_RANGE2_START = "192.168.43.2";
     private static final String DHCP_DEFAULT_RANGE2_STOP  = "192.168.43.254";
+    private static final String DHCP_DEFAULT_RANGE3_START = "192.168.44.2";
+    private static final String DHCP_DEFAULT_RANGE3_STOP  = "192.168.44.254";
 
     private String[] mDnsServers;
     private static final String DNS_DEFAULT_SERVER1 = "8.8.8.8";
@@ -146,17 +153,24 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         filter.addDataScheme("file");
         mContext.registerReceiver(mStateReceiver, filter);
 
+        // subscribe to Bluetooth on/off broadcasts
+        filter = new IntentFilter();
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
+        mContext.registerReceiver(mStateReceiver, filter);
+
         mUsbMassStorageOff = !Environment.MEDIA_SHARED.equals(
                 Environment.getExternalStorageState());
 
         mDhcpRange = context.getResources().getStringArray(
                 com.android.internal.R.array.config_tether_dhcp_range);
         if ((mDhcpRange.length == 0) || (mDhcpRange.length % 2 ==1)) {
-            mDhcpRange = new String[4];
+            mDhcpRange = new String[6];
             mDhcpRange[0] = DHCP_DEFAULT_RANGE1_START;
             mDhcpRange[1] = DHCP_DEFAULT_RANGE1_STOP;
             mDhcpRange[2] = DHCP_DEFAULT_RANGE2_START;
             mDhcpRange[3] = DHCP_DEFAULT_RANGE2_STOP;
+            mDhcpRange[4] = DHCP_DEFAULT_RANGE3_START;
+            mDhcpRange[5] = DHCP_DEFAULT_RANGE3_STOP;
         }
         mDunRequired = false; // resample when we turn on
 
@@ -164,6 +178,8 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                 com.android.internal.R.array.config_tether_usb_regexs);
         mTetherableWifiRegexs = context.getResources().getStringArray(
                 com.android.internal.R.array.config_tether_wifi_regexs);
+        mTetherableBtRegexs = context.getResources().getStringArray(
+                com.android.internal.R.array.config_tether_bt_regexs);
         mUpstreamIfaceRegexs = context.getResources().getStringArray(
                 com.android.internal.R.array.config_tether_upstream_regexs);
 
@@ -177,19 +193,24 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         Log.d(TAG, "interfaceLinkStatusChanged " + iface + ", " + link);
         boolean found = false;
         boolean usb = false;
+        boolean bt = false;
         if (isWifi(iface)) {
             found = true;
         } else if (isUsb(iface)) {
             found = true;
             usb = true;
+        } else if (isBt(iface)) {
+            found = true;
+            bt = true;
         }
-        if (found == false) return;
+        if (found == false)
+          return;
 
         synchronized (mIfaces) {
             TetherInterfaceSM sm = mIfaces.get(iface);
             if (link) {
                 if (sm == null) {
-                    sm = new TetherInterfaceSM(iface, mLooper, usb);
+                    sm = new TetherInterfaceSM(iface, mLooper, usb, bt);
                     mIfaces.put(iface, sm);
                     sm.start();
                 }
@@ -216,17 +237,30 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         return false;
     }
 
+    private boolean isBt(String iface) {
+        for (String regex : mTetherableBtRegexs) {
+            if (iface.matches(regex)) return true;
+        }
+        return false;
+    }
+
+
     public void interfaceAdded(String iface) {
         IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
         INetworkManagementService service = INetworkManagementService.Stub.asInterface(b);
         boolean found = false;
         boolean usb = false;
+        boolean bt = false;
         if (isWifi(iface)) {
             found = true;
         }
         if (isUsb(iface)) {
             found = true;
             usb = true;
+        }
+        if (isBt(iface)) {
+            found = true;
+            bt = true;
         }
         if (found == false) {
             Log.d(TAG, iface + " is not a tetherable iface, ignoring");
@@ -239,7 +273,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                 Log.e(TAG, "active iface (" + iface + ") reported as added, ignoring");
                 return;
             }
-            sm = new TetherInterfaceSM(iface, mLooper, usb);
+            sm = new TetherInterfaceSM(iface, mLooper, usb, bt);
             mIfaces.put(iface, sm);
             sm.start();
         }
@@ -321,6 +355,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
 
         boolean wifiTethered = false;
         boolean usbTethered = false;
+        boolean btTethered = false;
 
         synchronized (mIfaces) {
             Set ifaces = mIfaces.keySet();
@@ -336,6 +371,8 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                             usbTethered = true;
                         } else if (isWifi((String)iface)) {
                             wifiTethered = true;
+                        } else if (isBt((String)iface)) {
+                            btTethered = true;
                         }
                         activeList.add((String)iface);
                     }
@@ -354,13 +391,19 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                 activeList.size() + ", " + erroredList.size());
 
         if (usbTethered) {
-            if (wifiTethered) {
+            if (wifiTethered || btTethered) {
                 showTetheredNotification(com.android.internal.R.drawable.stat_sys_tether_general);
             } else {
                 showTetheredNotification(com.android.internal.R.drawable.stat_sys_tether_usb);
             }
         } else if (wifiTethered) {
-            showTetheredNotification(com.android.internal.R.drawable.stat_sys_tether_wifi);
+            if(btTethered) {
+                showTetheredNotification(com.android.internal.R.drawable.stat_sys_tether_general);
+            } else {
+                showTetheredNotification(com.android.internal.R.drawable.stat_sys_tether_wifi);
+            }
+        } else if (btTethered) {
+            showTetheredNotification(com.android.internal.R.drawable.stat_sys_tether_bluetooth);
         } else {
             clearTetheredNotification();
         }
@@ -441,6 +484,13 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
             } else if (action.equals(Intent.ACTION_BOOT_COMPLETED)) {
                 mBooted = true;
                 updateUsbStatus();
+            } else if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+                if (state == BluetoothAdapter.STATE_ON) {
+                     enableBtPAN(true);
+                } else if (state == BluetoothAdapter.STATE_TURNING_OFF) {
+                     enableBtPAN(false);
+                }
             }
         }
     }
@@ -471,8 +521,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
     private boolean enableUsbRndis(boolean enabled) {
         Log.d(TAG, "enableUsbRndis(" + enabled + ")");
         IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
-                INetworkManagementService service = INetworkManagementService.Stub.asInterface(b);
-
+        INetworkManagementService service = INetworkManagementService.Stub.asInterface(b);
         try {
             if (enabled) {
                 synchronized (this) {
@@ -542,8 +591,88 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         return true;
     }
 
+    // toggled when bluetooth is enabled/disabled
+    private boolean enableBtPAN(boolean enabled) {
+        Log.d(TAG, "enableBtPAN(" + enabled + ")");
+        IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
+                INetworkManagementService service = INetworkManagementService.Stub.asInterface(b);
+
+        try {
+            if (enabled) {
+                synchronized (this) {
+                    if (!service.isBtPANStarted()) {
+                        service.startBtPAN();
+                    }
+                }
+            } else {
+                if (service.isBtPANStarted()) {
+                    service.stopBtPAN();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error toggling Bluetooth PAN :" + e);
+            return false;
+        }
+        return true;
+    }
+
+    // configured when we start tethering
+    private boolean configureBtIface(boolean enabled) {
+        Log.d(TAG, "configureBtIface(" + enabled + ")");
+
+        IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
+        INetworkManagementService service = INetworkManagementService.Stub.asInterface(b);
+
+        // bring toggle the interfaces
+        String[] ifaces = new String[0];
+        try {
+            ifaces = service.listInterfaces();
+        } catch (Exception e) {
+            Log.e(TAG, "Error listing Interfaces :" + e);
+            return false;
+        }
+        for (String iface : ifaces) {
+            Log.d(TAG, "configureBtIface - iface=" + iface);
+            if (isBt(iface)) {
+                InterfaceConfiguration ifcg = null;
+                try {
+                    ifcg = service.getInterfaceConfig(iface);
+                    if (ifcg != null) {
+                        String[] addr = BT_NEAR_IFACE_ADDR.split("\\.");
+                        ifcg.ipAddr = (Integer.parseInt(addr[0]) << 24) +
+                                (Integer.parseInt(addr[1]) << 16) +
+                                (Integer.parseInt(addr[2]) << 8) +
+                                (Integer.parseInt(addr[3]));
+                        addr = BT_NETMASK.split("\\.");
+                        ifcg.netmask = (Integer.parseInt(addr[0]) << 24) +
+                                (Integer.parseInt(addr[1]) << 16) +
+                                (Integer.parseInt(addr[2]) << 8) +
+                                (Integer.parseInt(addr[3]));
+                        if (enabled) {
+                            ifcg.interfaceFlags = ifcg.interfaceFlags.replace("down", "up");
+                        } else {
+                            ifcg.interfaceFlags = ifcg.interfaceFlags.replace("up", "down");
+                        }
+                        ifcg.interfaceFlags = ifcg.interfaceFlags.replace("running", "");
+                        ifcg.interfaceFlags = ifcg.interfaceFlags.replace("  "," ");
+                        service.setInterfaceConfig(iface, ifcg);
+                    }
+                } catch (Exception e) {
+                    Log.e(TAG, "Error configuring interface " + iface + ", :" + e);
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     public String[] getTetherableUsbRegexs() {
         return mTetherableUsbRegexs;
+    }
+
+    public String[] getTetherableBtRegexs() {
+        return mTetherableBtRegexs;
     }
 
     public String[] getTetherableWifiRegexs() {
@@ -659,11 +788,13 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         String mMyUpstreamIfaceName;  // may change over time
 
         boolean mUsb;
+        boolean mBt;
 
-        TetherInterfaceSM(String name, Looper looper, boolean usb) {
+        TetherInterfaceSM(String name, Looper looper, boolean usb, boolean bt) {
             super(name, looper);
             mIfaceName = name;
             mUsb = usb;
+            mBt = bt;
             setLastError(ConnectivityManager.TETHER_ERROR_NO_ERROR);
 
             mInitialState = new InitialState();
@@ -704,6 +835,8 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                     // note everything's been unwound by this point so nothing to do on
                     // further error..
                     Tethering.this.configureUsbIface(false);
+                if (mBt)
+                    Tethering.this.configureBtIface(false);
                 }
             }
         }
@@ -734,6 +867,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         class InitialState extends HierarchicalState {
             @Override
             public void enter() {
+                Log.d(TAG, "InitialState.enter: Usb=" + mUsb + " Bt=" + mBt);
                 setAvailable(true);
                 setTethered(false);
                 sendTetherStateChangedBroadcast();
@@ -764,9 +898,20 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
         class StartingState extends HierarchicalState {
             @Override
             public void enter() {
+                Log.d(TAG, "StartingState.enter: Usb=" + mUsb + " Bt=" + mBt);
                 setAvailable(false);
                 if (mUsb) {
                     if (!Tethering.this.configureUsbIface(true)) {
+                        mTetherMasterSM.sendMessage(TetherMasterSM.CMD_TETHER_MODE_UNREQUESTED,
+                                TetherInterfaceSM.this);
+                        setLastError(ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
+
+                        transitionTo(mInitialState);
+                        return;
+                    }
+                }
+                if (mBt) {
+                    if (!Tethering.this.configureBtIface(true)) {
                         mTetherMasterSM.sendMessage(TetherMasterSM.CMD_TETHER_MODE_UNREQUESTED,
                                 TetherInterfaceSM.this);
                         setLastError(ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
@@ -791,6 +936,13 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                                 TetherInterfaceSM.this);
                         if (mUsb) {
                             if (!Tethering.this.configureUsbIface(false)) {
+                                setLastErrorAndTransitionToInitialState(
+                                    ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
+                                break;
+                            }
+                        }
+                        if (mBt) {
+                            if (!Tethering.this.configureBtIface(false)) {
                                 setLastErrorAndTransitionToInitialState(
                                     ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
                                 break;
@@ -825,6 +977,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                 IBinder b = ServiceManager.getService(Context.NETWORKMANAGEMENT_SERVICE);
                 INetworkManagementService service =
                         INetworkManagementService.Stub.asInterface(b);
+                Log.d(TAG, "TetheredState.enter: Usb=" + mUsb + " Bt=" + mBt);
                 try {
                     service.tetherInterface(mIfaceName);
                 } catch (Exception e) {
@@ -841,6 +994,7 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
             }
             @Override
             public void exit() {
+                Log.d(TAG, "TetheredState.exit: Usb=" + mUsb + " Bt=" + mBt);
                 if (mUsb) Tethering.this.enableUsbRndis(false);
             }
             @Override
@@ -880,6 +1034,12 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                         if (message.what == CMD_TETHER_UNREQUESTED) {
                             if (mUsb) {
                                 if (!Tethering.this.configureUsbIface(false)) {
+                                    setLastError(
+                                            ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
+                                }
+                            }
+                            if (mBt) {
+                                if (!Tethering.this.configureBtIface(false)) {
                                     setLastError(
                                             ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
                                 }
@@ -964,6 +1124,11 @@ public class Tethering extends INetworkManagementEventObserver.Stub {
                         Log.d(TAG, "Tether lost upstream connection " + mIfaceName);
                         sendTetherStateChangedBroadcast();
                         if (mUsb) {
+                            if (!Tethering.this.configureUsbIface(false)) {
+                                setLastError(ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
+                            }
+                        }
+                        if (mBt) {
                             if (!Tethering.this.configureUsbIface(false)) {
                                 setLastError(ConnectivityManager.TETHER_ERROR_IFACE_CFG_ERROR);
                             }

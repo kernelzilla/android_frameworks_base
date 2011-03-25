@@ -71,5 +71,7 @@ interface IConnectivityManager
 
     String[] getTetherableUsbRegexs();
 
+    String[] getTetherableBtRegexs();
+
     String[] getTetherableWifiRegexs();
 }

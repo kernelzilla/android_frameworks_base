@@ -321,6 +321,7 @@ public class ConnectivityService extends IConnectivityManager.Stub {
         mTetheringConfigValid = (((mNetTrackers[ConnectivityManager.TYPE_MOBILE_DUN] != null) ||
                                   !mTethering.isDunRequired()) &&
                                  (mTethering.getTetherableUsbRegexs().length != 0 ||
+                                  mTethering.getTetherableBtRegexs().length != 0 ||
                                   mTethering.getTetherableWifiRegexs().length != 0) &&
                                  mTethering.getUpstreamIfaceRegexs().length != 0);
 
@@ -1501,6 +1502,16 @@ public class ConnectivityService extends IConnectivityManager.Stub {
         enforceTetherAccessPermission();
         if (isTetheringSupported()) {
             return mTethering.getTetherableUsbRegexs();
+        } else {
+            return new String[0];
+        }
+    }
+
+    // TODO - proper iface API for selection by property, inspection, etc
+    public String[] getTetherableBtRegexs() {
+        enforceTetherAccessPermission();
+        if (isTetheringSupported()) {
+            return mTethering.getTetherableBtRegexs();
         } else {
             return new String[0];
         }

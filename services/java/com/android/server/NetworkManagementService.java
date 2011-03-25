@@ -63,6 +63,7 @@ class NetworkManagementService extends INetworkManagementService.Stub {
 
         public static final int TetherStatusResult        = 210;
         public static final int IpFwdStatusResult         = 211;
+        public static final int BtPANStatusResult         = 212;
         public static final int InterfaceGetCfgResult     = 213;
         public static final int SoftapStatusResult        = 214;
         public static final int UsbRNDISStatusResult      = 215;
@@ -574,6 +575,55 @@ class NetworkManagementService extends INetworkManagementService.Stub {
         }
         throw new IllegalStateException("Got an empty response");
     }
+
+
+    public void startBtPAN() throws IllegalStateException {
+        mContext.enforceCallingOrSelfPermission(
+                android.Manifest.permission.CHANGE_NETWORK_STATE, "NetworkManagementService");
+        try {
+            mConnector.doCommand("pan start");
+        } catch (NativeDaemonConnectorException e) {
+            throw new IllegalStateException(
+                    "Error communicating to native daemon for starting Bluetooth PAN", e);
+        }
+    }
+
+    public void stopBtPAN() throws IllegalStateException {
+        mContext.enforceCallingOrSelfPermission(
+                android.Manifest.permission.CHANGE_NETWORK_STATE, "NetworkManagementService");
+        try {
+            mConnector.doCommand("pan stop");
+        } catch (NativeDaemonConnectorException e) {
+            throw new IllegalStateException("Error communicating to native daemon", e);
+        }
+    }
+
+    public boolean isBtPANStarted() throws IllegalStateException {
+        mContext.enforceCallingOrSelfPermission(
+                android.Manifest.permission.ACCESS_NETWORK_STATE, "NetworkManagementService");
+        ArrayList<String> rsp;
+        try {
+            rsp = mConnector.doCommand("pan status");
+        } catch (NativeDaemonConnectorException e) {
+            throw new IllegalStateException(
+                    "Error communicating to native daemon to check Bluetooth PAN status", e);
+        }
+
+        for (String line : rsp) {
+            String []tok = line.split(" ");
+            int code = Integer.parseInt(tok[0]);
+            if (code == NetdResponseCode.BtPANStatusResult) {
+                if (tok[3].equals("started"))
+                    return true;
+                return false;
+            } else {
+                throw new IllegalStateException(String.format("Unexpected response code %d", code));
+            }
+        }
+        throw new IllegalStateException("Got an empty response");
+    }
+
+
 
     public void startAccessPoint(WifiConfiguration wifiConfig, String wlanIface, String softapIface)
              throws IllegalStateException {

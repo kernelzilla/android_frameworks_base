@@ -482,6 +482,17 @@ public class ConnectivityManager
     /**
      * {@hide}
      */
+    public String[] getTetherableBtRegexs() {
+        try {
+            return mService.getTetherableBtRegexs();
+        } catch (RemoteException e) {
+            return new String[0];
+        }
+    }
+
+    /**
+     * {@hide}
+     */
     public String[] getTetherableWifiRegexs() {
         try {
             return mService.getTetherableWifiRegexs();

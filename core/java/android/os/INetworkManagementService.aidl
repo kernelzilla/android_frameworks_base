@@ -166,6 +166,21 @@ interface INetworkManagementService
     boolean isUsbRNDISStarted();
 
     /**
+     * Turn on Bluetooth PAN support
+     */
+    void startBtPAN();
+
+    /**
+     * Turn off Bluetooth PAN support
+     */
+    void stopBtPAN();
+
+    /**
+     * Check the status of Bluetooth PAN support
+     */
+    boolean isBtPANStarted();
+
+    /**
      * Start Wifi Access Point
      */
     void startAccessPoint(in WifiConfiguration wifiConfig, String wlanIface, String softapIface);
