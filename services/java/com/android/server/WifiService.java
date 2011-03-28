@@ -141,7 +141,7 @@ public class WifiService extends IWifiManager.Stub {
      * re-establishing a connection to the mobile data network.
      */
     //private static final long DEFAULT_IDLE_MILLIS = 15 * 60 * 1000; /* 15 minutes */
-    private static final long DEFAULT_IDLE_MILLIS = 2 * 60 * 1000; /* 2 minutes */
+    private static final long DEFAULT_IDLE_MILLIS = 30 * 1000; /* 30 sec */
 
     private static final String WAKELOCK_TAG = "WifiService";
 
@@ -1737,7 +1737,7 @@ public class WifiService extends IWifiManager.Stub {
                         // we don't have time to track down for this release.  Delay instead, but not
                         // as long as we would if connected (below)
                         // TODO - fix the race conditions and switch back to the immediate turn-off
-                        long triggerTime = System.currentTimeMillis() + (2*60*1000); // 2 min
+                        long triggerTime = System.currentTimeMillis() + (5*1000); // 5 sec
                         Slog.d(TAG, "setting ACTION_DEVICE_IDLE timer for 120,000 ms");
                         mAlarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, mIdleIntent);
                         //  // do not keep Wifi awake when screen is off if Wifi is not associated
