@@ -21,10 +21,8 @@ LOCAL_SHARED_LIBRARIES := \
         libutils \
         libui
 
-ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
-    LOCAL_SHARED_LIBRARIES += \
+LOCAL_SHARED_LIBRARIES += \
     	libsurfaceflinger_client
-endif
 
 LOCAL_STATIC_LIBRARIES :=
 

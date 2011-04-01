@@ -14,7 +14,6 @@ ifeq ($(BOARD_CAMERA_USE_GETBUFFERINFO),true)
     LOCAL_CFLAGS += -DUSE_GETBUFFERINFO
 endif
 
-ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
@@ -30,8 +29,3 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 
-else
-
-include $(BUILD_STATIC_LIBRARY)
-
-endif

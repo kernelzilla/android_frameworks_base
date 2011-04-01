@@ -255,13 +255,18 @@ void CameraParameters::unflatten(const String8 &params)
 
 void CameraParameters::set(const char *key, const char *value)
 {
+    if ( NULL == value ) {
+        mMap.removeItem( String8(key) );
+        return;
+    }
+
     // XXX i think i can do this with strspn()
     if (strchr(key, '=') || strchr(key, ';')) {
         //XXX LOGE("Key \"%s\"contains invalid character (= or ;)", key);
         return;
     }
 
-    if (strchr(value, '=') || strchr(key, ';')) {
+    if ((strchr(value, '=')) || strchr(key, ';')) {
         //XXX LOGE("Value \"%s\"contains invalid character (= or ;)", value);
         return;
     }
@@ -450,6 +455,11 @@ status_t CameraParameters::dump(int fd, const Vector<String16>& args) const
         result.append(buffer);
     }
     write(fd, result.string(), result.size());
+    return NO_ERROR;
+}
+
+status_t CameraParameters::setZoomSize(int a, int b)
+{
     return NO_ERROR;
 }
 

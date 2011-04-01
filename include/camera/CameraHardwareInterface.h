@@ -90,6 +90,10 @@ public:
     /** Return the IMemoryHeap for the preview image heap */
     virtual sp<IMemoryHeap>         getPreviewHeap() const = 0;
 
+    /** No idea why... but it appears to be there */
+    virtual sp<IMemoryHeap> getPreviewHeapnew(int i) const = 0;
+
+
     /** Return the IMemoryHeap for the raw image heap */
     virtual sp<IMemoryHeap>         getRawHeap() const = 0;
 
