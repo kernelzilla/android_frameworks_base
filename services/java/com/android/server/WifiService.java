@@ -1737,7 +1737,7 @@ public class WifiService extends IWifiManager.Stub {
                         // we don't have time to track down for this release.  Delay instead, but not
                         // as long as we would if connected (below)
                         // TODO - fix the race conditions and switch back to the immediate turn-off
-                        long triggerTime = System.currentTimeMillis() + (5*1000); // 5 sec
+                        long triggerTime = System.currentTimeMillis() + (30*1000); // 30sec
                         Slog.d(TAG, "setting ACTION_DEVICE_IDLE timer for 120,000 ms");
                         mAlarmManager.set(AlarmManager.RTC_WAKEUP, triggerTime, mIdleIntent);
                         //  // do not keep Wifi awake when screen is off if Wifi is not associated
