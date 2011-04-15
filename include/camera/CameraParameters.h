@@ -57,7 +57,6 @@ public:
     void getPictureSize(int *width, int *height) const;
     void setPictureFormat(const char *format);
     const char *getPictureFormat() const;
-    status_t setZoomSize(int a, int b);
 
     int getOrientation() const;
     void setOrientation(int orientation);

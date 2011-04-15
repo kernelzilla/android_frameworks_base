@@ -149,7 +149,7 @@ private:
 
         static      sp<Client>  getClientFromCookie(void* user);
 
-                    void        handlePreviewData(const sp<IMemory>&, int iBuffer);
+                    void        handlePreviewData(const sp<IMemory>&);
                     void        handleShutter(image_rect_type *image);
                     void        handlePostview(const sp<IMemory>&);
                     void        handleRawPicture(const sp<IMemory>&);
@@ -186,10 +186,6 @@ private:
         mutable     Condition                   mReady;
                     sp<CameraService>           mCameraService;
                     sp<ISurface>                mSurface;
-                    ISurface::BufferHeap *      mPreviewBuffers[4];
-		    sp<IMemoryHeap>		mPreviewHeaps[4];
-		    int                         mPreviewWidth;
-		    int                         mPreviewHeight;
                     int                         mPreviewCallbackFlag;
                     int                         mOrientation;
 

@@ -36,8 +36,10 @@ LOCAL_SHARED_LIBRARIES := \
 	libbinder \
 	libui
 
-LOCAL_SHARED_LIBRARIES += \
+ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
+    LOCAL_SHARED_LIBRARIES += \
     	libsurfaceflinger_client
+endif
 
 LOCAL_C_INCLUDES := \
 	$(call include-path-for, corecg graphics)

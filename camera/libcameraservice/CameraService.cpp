@@ -684,26 +684,16 @@ status_t CameraService::Client::registerPreviewBuffers()
         h = preview_sizes[1].height;
     }
 
-    mPreviewWidth = w;
-    mPreviewHeight = h;
-
-    status_t ret = NO_ERROR;
-
-    for (int iBuffer=0; iBuffer<4; iBuffer++ ) {
-        mPreviewBuffers[iBuffer] = NULL;
-        mPreviewHeaps[iBuffer] = mHardware->getPreviewHeapnew(iBuffer);
-
     // don't use a hardcoded format here
-//    ISurface::BufferHeap buffers(w, h, w, h,
-//                                 HAL_PIXEL_FORMAT_YCrCb_420_SP,
-//                                 0 /*mOrientation*/,
-//                                 0,
-//                                 mHardware->getPreviewHeapnew(iHeap));
+    ISurface::BufferHeap buffers(w, h, w, h,
+                                 HAL_PIXEL_FORMAT_YCrCb_420_SP,
+                                 mOrientation,
+                                 0,
+                                 mHardware->getPreviewHeap());
 
-//     ret = mSurface->registerBuffers(buffers);
-//     if (ret != NO_ERROR) {
-//        LOGE("registerBuffers failed with status %d", ret);
-//    }
+    status_t ret = mSurface->registerBuffers(buffers);
+    if (ret != NO_ERROR) {
+        LOGE("registerBuffers failed with status %d", ret);
     }
     return ret;
 }
@@ -1049,38 +1039,10 @@ void CameraService::Client::handleShutter(
 }
 
 // preview callback - frame buffer update
-void CameraService::Client::handlePreviewData(const sp<IMemory>& mem, int iPreviewBuffer)
+void CameraService::Client::handlePreviewData(const sp<IMemory>& mem)
 {
     ssize_t offset;
     size_t size;
-
-    if ( mSurface == NULL ) {
-        LOGE("handlePreviewData: NULL mSurface");
-        return;
-    }
-
-    //mSurface->unregisterBuffers();
-
-    if ( NULL == mPreviewBuffers[iPreviewBuffer] ) {
-	mPreviewBuffers[iPreviewBuffer] = new ISurface::BufferHeap( mPreviewWidth, mPreviewHeight, mPreviewWidth, mPreviewHeight,
-                                 HAL_PIXEL_FORMAT_YCrCb_420_SP,
-                                 mOrientation,
-                                 0,
-                                 mPreviewHeaps[iPreviewBuffer]);
-        mSurface->registerBuffers(*(mPreviewBuffers[iPreviewBuffer]));
-    }
-
-    // don't use a hardcoded format here
-//    ISurface::BufferHeap buffers(mPreviewWidth, mPreviewHeight, mPreviewWidth, mPreviewHeight,
-//                                 HAL_PIXEL_FORMAT_YCrCb_420_SP,
-//                                 0 /*mOrientation*/,
-//                                 0,
-//                                 mPreviewHeaps[iPreviewBuffer]);
-
-//    mSurface->registerBuffers(buffers);
-
-    //mSurface->registerBuffers(*mPreviewBuffers[iPreviewBuffer]);
-
     sp<IMemoryHeap> heap = mem->getMemory(&offset, &size);
 
 #if DEBUG_HEAP_LEAKS && 0 // debugging
@@ -1260,9 +1222,9 @@ void CameraService::Client::dataCallback(int32_t msgType, const sp<IMemory>& dat
         return;
     }
 
-    switch (msgType & CAMERA_MSG_ALL_MSGS) {
+    switch (msgType) {
         case CAMERA_MSG_PREVIEW_FRAME:
-            client->handlePreviewData(dataPtr, msgType >> 12);
+            client->handlePreviewData(dataPtr);
             break;
         case CAMERA_MSG_POSTVIEW_FRAME:
             client->handlePostview(dataPtr);
@@ -1366,7 +1328,6 @@ status_t CameraService::Client::sendCommand(int32_t cmd, int32_t arg1, int32_t a
         if (mHardware->previewEnabled()) {
             return INVALID_OPERATION;
         }
-
         switch (arg1) {
             case 0:
                 mOrientation = ISurface::BufferHeap::ROT_0;
@@ -1383,7 +1344,6 @@ status_t CameraService::Client::sendCommand(int32_t cmd, int32_t arg1, int32_t a
             default:
                 return BAD_VALUE;
         }
-
         return OK;
     }
 

@@ -31,9 +31,11 @@ LOCAL_SRC_FILES:= \
 LOCAL_SHARED_LIBRARIES := \
 	libui libcutils libutils libbinder libsonivox libicuuc libexpat
 
-LOCAL_SHARED_LIBRARIES += \
+ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
+    LOCAL_SHARED_LIBRARIES += \
         libsurfaceflinger_client \
         libcamera_client
+endif
 
 ifeq ($(BOARD_HAVE_FM_RADIO),true)
   LOCAL_CFLAGS += -DHAVE_FM_RADIO

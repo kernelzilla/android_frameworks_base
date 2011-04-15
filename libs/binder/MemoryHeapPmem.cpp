@@ -36,7 +36,6 @@
 
 namespace android {
 
-
 // ---------------------------------------------------------------------------
 
 MemoryHeapPmem::MemoryPmem::MemoryPmem(const sp<MemoryHeapPmem>& heap)

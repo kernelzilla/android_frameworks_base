@@ -43,8 +43,10 @@ LOCAL_SHARED_LIBRARIES :=     		\
 	libstagefright_omx    			\
 	libstagefright_color_conversion
 
-LOCAL_SHARED_LIBRARIES += \
+ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
+    LOCAL_SHARED_LIBRARIES += \
     	libsurfaceflinger_client
+endif
 
 ifneq ($(BUILD_WITHOUT_PV),true)
 LOCAL_SHARED_LIBRARIES += \

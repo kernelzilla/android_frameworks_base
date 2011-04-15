@@ -23,9 +23,11 @@ LOCAL_SHARED_LIBRARIES := \
     libui \
     libcutils 
 
-LOCAL_SHARED_LIBRARIES += \
- 	libsurfaceflinger_client \
+ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
+    LOCAL_SHARED_LIBRARIES += \
+    	libsurfaceflinger_client \
     	libcamera_client
+endif
 
 ifneq ($(BUILD_WITHOUT_PV),true)
 

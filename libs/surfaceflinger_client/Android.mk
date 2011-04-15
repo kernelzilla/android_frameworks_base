@@ -12,6 +12,7 @@ LOCAL_SRC_FILES:= \
 
 LOCAL_MODULE:= libsurfaceflinger_client
 
+ifneq ($(BOARD_USES_ECLAIR_LIBCAMERA),true)
 
 LOCAL_SHARED_LIBRARIES := \
 	libcutils \
@@ -27,3 +28,8 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 
+else
+
+include $(BUILD_STATIC_LIBRARY)
+
+endif
